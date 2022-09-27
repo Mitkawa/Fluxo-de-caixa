@@ -15,11 +15,32 @@
             <hr>
             
         </h2>
+        
     </h1>
 </div>   
     <a href="{{ route('lancamento.create') }}" class="btn btn-dark">
         Novo
+        <i class="fa-duotone fa-plus"></i>
     </a>
+
+    {{-- Formulario de pesquisa --}}
+        
+    <form action="{{ route('lancamento.index') }}" method="get">
+        
+        <input type="text"
+        name="pesquisar"
+        id="pesquisar"
+        value="{{old('pesquisar')}}"
+        placeholder="Digite o termo a ser pesquisado...">
+
+        <input type="date" name="dt_inicio" id="dt_inicio" placeholder="Inicio">
+
+        <input type="date" name="dt_fim" id="dt_fim" placeholder="Fim">
+        
+        <input type="submit" class="btn btn-info" value="Pesquisar" >
+
+      </form>
+      {{-- /Formulário de pesquisa --}}
 
     <table class="table table-striped table-border table-hover">
         {{-- Cabeçalho --}}
@@ -44,6 +65,9 @@
                         <a href="{{ route('lancamento.edit', ['id'=>$lancamento->id_lancamento]) }}" class="btn btn-success">
                             Editar
                         </a>
+                        <a href="{{ route('lancamento.edit', ['id'=>$lancamento->id_lancamento]) }}" class="btn btn-danger">
+                            Excluir
+                        </a>
                     </td>
                     <td>{{ $lancamento->id_lancamento                 }}</td>
                     <td>{{ $lancamento->dt_faturamento->format('d/m/Y')      }}</td>
@@ -54,6 +78,7 @@
                     <td>{{ $lancamento->created_at->format('d/m/Y')}}</td>
                     <td>{{ $lancamento->updated_at->format('d/m/Y')    }}</td>
                 </tr>
+                
             @endforeach
         </tbody>
     </table>

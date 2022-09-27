@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\{Lancamento, CentroCusto, User, Tipo};
+use Illuminate\Support\Carbon;
+use DateTime; 
 
 
 class LancamentoController extends Controller
@@ -14,9 +16,51 @@ class LancamentoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
+       
         $lancamentos = Lancamento::where('id_user',Auth::user()->id_user)->orderBy('dt_faturamento');
+
+        if($request->get('pesquisar'))
+        {
+            $pesquisar = '%'.$request->get('pesquisar').'%';
+
+        $lancamentos->where('descricao','like',$pesquisar);
+        }
+
+        //datas
+
+        //data inicio
+        if($request->get('dt_inicio') || $request->get('dt_fim')){
+            if($request->get('dt_inicio'))
+            {
+            $dt_inicio = $request->get('dt_inicio');
+            }else
+            {
+                $dt= new Carbon($request->get('dt_fim'));
+                $dt_inicio = date('Y-m-d');
+                $dt->subDays(10);
+                $dt_fim= $dt;
+
+            }
+            //data fm
+
+            if($request->get('dt_fim'))
+            {
+                $dt_fim = $request->get('dt_fim');
+            }  
+            else
+            {
+                $dt= new Carbon($request->get('dt_inicio'));
+                $dt->addDays(10);
+                $dt_fim= $dt;
+            }  
+
+
+            $lancamentos->wherebetween('dt_lancamento',[$dt_inicio,$dt_fim]);
+        }
+
+        // fim datas
 
         return view('lancamento.index')->with(compact('lancamentos'));
     }
@@ -73,8 +117,8 @@ class LancamentoController extends Controller
     {
         $lancamento = Lancamento::find($id);
         
-        $entradas = CentroCusto::where('id_tipo',2)->orderBy('centro_custo');
-        $saidas = CentroCusto::where('id_tipo',1)->orderBy('centro_custo');
+        $entradas = CentroCusto::where('id_tipo',1)->orderBy('centro_custo');
+        $saidas = CentroCusto::where('id_tipo',2)->orderBy('centro_custo');
 
 
 
