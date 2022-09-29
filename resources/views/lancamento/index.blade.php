@@ -58,7 +58,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($lancamentos->get() as $lancamento)
+            @foreach ($lancamentos as $lancamento)
                 
                 <tr>
                     <td>
@@ -80,7 +80,22 @@
                 </tr>
                 
             @endforeach
+
         </tbody>
+    </table>
+    {{-- Paginação --}}
+    <div>
+        {{
+            $lancamentos->appends(
+                [
+                    'pesquisar'=> request()->get('pesquisar', ''),
+                    'dt_inicio'=> request()->get('dt_inicio', ''),
+                    'dt_fim'=> request()->get('dt_fim', '')
+                ]
+            )
+            ->links()
+        }}
+    </div>
     </table>
 
 @endsection

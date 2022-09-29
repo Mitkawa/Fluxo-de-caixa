@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\OlaMd;
+use App\Mail\OlaMitMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\{Lancamento, CentroCusto, User, Tipo};
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Mail;
 use DateTime; 
 
 
@@ -19,7 +22,7 @@ class LancamentoController extends Controller
     public function index(Request $request)
     {
        
-        $lancamentos = Lancamento::where('id_user',Auth::user()->id_user)->orderBy('dt_faturamento');
+        $lancamentos = Lancamento::where('id_user',Auth::user()->id_user)->orderBy('dt_faturamento', 'desc')->paginate(1);
 
         if($request->get('pesquisar'))
         {
@@ -28,42 +31,35 @@ class LancamentoController extends Controller
         $lancamentos->where('descricao','like',$pesquisar);
         }
 
-        //datas
+         //Datas Inicio
+         if($request->get('dt_inicio') || $request->get('dt_fim') ){
 
-        //data inicio
-        if($request->get('dt_inicio') || $request->get('dt_fim')){
-            if($request->get('dt_inicio'))
-            {
-            $dt_inicio = $request->get('dt_inicio');
-            }else
-            {
-                $dt= new Carbon($request->get('dt_fim'));
-                $dt_inicio = date('Y-m-d');
+            if($request->get('dt_inicio')){
+                $dt_inicio = $request->get('dt_inicio');
+            }else{
+                $dt = new Carbon($request->get('dt_inicio'));
                 $dt->subDays(10);
-                $dt_fim= $dt;
-
+                $dt_inicio = $dt;
             }
-            //data fm
-
-            if($request->get('dt_fim'))
-            {
+        
+        //Data Fim
+            if($request->get('dt_fim')){
                 $dt_fim = $request->get('dt_fim');
-            }  
-            else
-            {
-                $dt= new Carbon($request->get('dt_inicio'));
+            }else{
+                $dt = new Carbon($dt_inicio);
                 $dt->addDays(10);
-                $dt_fim= $dt;
-            }  
-
-
-            $lancamentos->wherebetween('dt_lancamento',[$dt_inicio,$dt_fim]);
+                $dt_fim = $dt;
+            }
         }
 
-        // fim datas
+        //enviar o e-mail
+        Mail::to(auth()->user())->send(new OlaMitMail(auth()->user()));
+       // Mail::to('teste@traaansa.com.br')->send(new OlaMd());
 
         return view('lancamento.index')->with(compact('lancamentos'));
+    
     }
+    
 
     /**
      * Caminho para o form de cadastro
