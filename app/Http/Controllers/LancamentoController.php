@@ -53,7 +53,7 @@ class LancamentoController extends Controller
         }
 
         //enviar o e-mail
-        Mail::to(auth()->user())->send(new OlaMitMail(auth()->user()));
+        //Mail::to(auth()->user())->send(new OlaMitMail(auth()->user()));
        // Mail::to('teste@traaansa.com.br')->send(new OlaMd());
 
         return view('lancamento.index')->with(compact('lancamentos'));
