@@ -18,7 +18,7 @@
         
     </h1>
 </div>   
-    <a href="{{ route('lancamento.create') }}" class="btn btn-dark">
+    <a href="{{ route('lancamento.create') }}" class="btn btn-dark" width="40px">
         Novo
         <i class="fa-duotone fa-plus"></i>
     </a>

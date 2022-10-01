@@ -10,9 +10,9 @@
         @endif
     </h1>
     @if ($lancamento)
-        <form action="{{ route('lancamento.update', ['id'=>$lancamento->id_lancamento ]) }}" method="post">        
+        <form action="{{ route('lancamento.update', ['id'=>$lancamento->id_lancamento ]) }}" method="post" enctype="multipart/form-data">        
     @else
-        <form action="{{ route('lancamento.store') }}" method="post">        
+        <form action="{{ route('lancamento.store') }}" method="post" enctype="multipart/form-data">        
     @endif
         @csrf
         <div class="row">
@@ -21,7 +21,7 @@
                 <label for="id_centro_custo" class="form-label">CentroCusto*</label>
                 <select name="id_centro_custo" id="id_centro_custo" class="form-select" required>
                 <option value="">Selecione</option>
-                <optgroup label="Entradas">
+                <optgroup label="Saídas">
                     @foreach ($saidas->get() as $centroCustos)
                         <option value="{{ $centroCustos->id_centro_custo }}"
                         {{($lancamento && $lancamento->id_centro_custo == $centroCustos->id_centro_custo  )
@@ -33,7 +33,7 @@
                         </option>
                     @endforeach                    
                 </optgroup>
-                <optgroup label="Saídas">                    
+                <optgroup label="Entradas">                    
                     @foreach ($entradas->get() as $centroCustos)
                     <option value="{{ $centroCustos->id_centro_custo }}"
                     {{($lancamento && $lancamento->id_centro_custo == $centroCustos->id_centro_custo  )
@@ -55,6 +55,11 @@
             <div class="form-group col-md-2">
                 <label for="valor" class="form-label">Valor*</label>
                 <input type="number" name="valor" id="valor" class="form-control" min="0" value ="{{ $lancamento ? $lancamento->valor : old('valor')}}" required>
+            </div>
+
+            <div class="form-group col-md-5">
+                <label for="arquivo" class="form-label">Arquivo*</label>
+                <input type="file" name="arquivo" id="arquivo" class="form-control">
             </div>
 
             <div class="form-group col-md-12">

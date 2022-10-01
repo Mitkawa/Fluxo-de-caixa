@@ -1,79 +1,83 @@
 <?php
 
 namespace App\Http\Controllers;
-
-use App\Mail\OlaMd;
-use App\Mail\OlaMitMail;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\{Lancamento, CentroCusto, User, Tipo};
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
-use DateTime; 
+use Illuminate\Support\Facades\Storage;
 
+use App\Models\{
+                Lancamento,
+                CentroCusto,
+                User,
+                Tipo
+            };
 
 class LancamentoController extends Controller
 {
     /**
-     * Mostra todos os lançamentos do Usuario
+     * Mostra os lançamentos do usuário
      *
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
-       
-        $lancamentos = Lancamento::where('id_user',Auth::user()->id_user)->orderBy('dt_faturamento', 'desc')->paginate(1);
 
-        if($request->get('pesquisar'))
-        {
-            $pesquisar = '%'.$request->get('pesquisar').'%';
-
-        $lancamentos->where('descricao','like',$pesquisar);
-        }
-
-         //Datas Inicio
-         if($request->get('dt_inicio') || $request->get('dt_fim') ){
-
-            if($request->get('dt_inicio')){
-                $dt_inicio = $request->get('dt_inicio');
-            }else{
-                $dt = new Carbon($request->get('dt_inicio'));
+        $pesquisar = $request->pesquisar;
+        $dt_inicio = null;
+        $dt_fim = null;
+        if ( $request->dt_inicio ||  $request->dt_fim){
+            // data de inicio
+            if ($request->dt_inicio) {
+                $dt_inicio = $request->dt_inicio;
+            } else {
+                $dt = new Carbon($request->dt_fim);
                 $dt->subDays(10);
                 $dt_inicio = $dt;
             }
-        
-        //Data Fim
-            if($request->get('dt_fim')){
-                $dt_fim = $request->get('dt_fim');
-            }else{
-                $dt = new Carbon($dt_inicio);
+            // data de fim
+            if ($request->dt_fim){
+                $dt_fim = $request->dt_fim;
+            } else {
+                $dt = new Carbon($request->dt_inicio);
                 $dt->addDays(10);
                 $dt_fim = $dt;
-            }
+            }           
         }
 
-        //enviar o e-mail
-        //Mail::to(auth()->user())->send(new OlaMitMail(auth()->user()));
-       // Mail::to('teste@traaansa.com.br')->send(new OlaMd());
+        $lancamentos = Lancamento::where( function( $query ) use ($pesquisar,$dt_inicio,$dt_fim){
+                    $query->where('id_user',Auth::user()->id_user);
+                    
+                    if($pesquisar){
+                        $query->where('descricao','like',"%{$pesquisar}%");
+                    }
 
-        return view('lancamento.index')->with(compact('lancamentos'));
-    
+                    if($dt_inicio || $dt_fim){
+                        $query->whereBetween('dt_faturamento', [$dt_inicio, $dt_fim]);
+                    }
+        })->with(['centroCusto.tipo'])
+            ->orderBy('dt_faturamento', 'desc')
+            ->paginate(5); 
+          
+        return view('lancamento.index')
+                    ->with(compact('lancamentos'));
     }
-    
 
     /**
-     * Caminho para o form de cadastro
+     * Encaminha para o FORM de cadastro.
      *
      * @return \Illuminate\Http\Response
      */
     public function create()
     {
-        $lancamento = null;    
+        $lancamento = null;
         $centrosDeCusto = CentroCusto::orderBy('centro_custo');
-        $entradas = CentroCusto::where('id_tipo',2)->orderBy('centro_custo');
-        $saidas = CentroCusto::where('id_tipo',1)->orderBy('centro_custo');
-
-        return view('lancamento.form')->with(compact('entradas','saidas','lancamento'));
+        $entradas = CentroCusto::where('id_tipo',1)
+                                ->orderBy('centro_custo');
+        $saidas = CentroCusto::where('id_tipo',2)
+                                ->orderBy('centro_custo');
+        return view('lancamento.form')
+                ->with(compact('entradas','saidas','lancamento'));
     }
 
     /**
@@ -86,10 +90,22 @@ class LancamentoController extends Controller
     {
         $lancamento = new Lancamento();
         $lancamento->fill($request->all());
-        $lancamento->id_user = auth::user()->id_user;        
-        $lancamento->save();
+        $lancamento->id_user = Auth::user()->id_user;
 
-        return redirect()->route('lancamento.index');
+        //subir o arquivo
+        //$path = $request->arquivo->store('arquivos');
+        if($request->arquivo)
+        {
+        $extension = $request->arquivo->getClientOriginalExtension();
+        $lancamento->arquivo = $request->arquivo->storeAs ('arquivos', date('YmdHis'). '.'.$extension);
+        }
+        //echo $path;
+        //dd($request->arquivo);
+
+
+        $lancamento->save();
+        return redirect()
+                ->route('lancamento.index');
     }
 
     /**
@@ -112,13 +128,13 @@ class LancamentoController extends Controller
     public function edit(int $id)
     {
         $lancamento = Lancamento::find($id);
-        
-        $entradas = CentroCusto::where('id_tipo',1)->orderBy('centro_custo');
-        $saidas = CentroCusto::where('id_tipo',2)->orderBy('centro_custo');
-
-
-
-        return view('lancamento.form')->with(compact('entradas','saidas','lancamento',));
+        $centrosDeCusto = CentroCusto::orderBy('centro_custo');
+        $entradas = CentroCusto::where('id_tipo',1)
+                                ->orderBy('centro_custo');
+        $saidas = CentroCusto::where('id_tipo',2)
+                                ->orderBy('centro_custo');
+        return view('lancamento.form')
+                ->with(compact('entradas','saidas','lancamento'));
     }
 
     /**
@@ -130,11 +146,29 @@ class LancamentoController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $lancamento = lancamento::find($id);
-        $lancamento->fill($request->all());
-        $lancamento->save();
+        $lancamento = Lancamento::find($id);
+        //verificar se um arquivo foi enviado
+        //e se já existia um arquivo anterior
+        //para apagar
+        if($request->arquivo && $lancamento->arquivo !='')
+        {
+            if(Storage::exists($lancamento->arquivo))
+            {
+                Storage::delete($lancamento->arquivo);
+            }
+        }
 
-        return redirect()->route('lancamento.index')->with('success','Atualizado com sucesso');
+        $lancamento->fill($request->all());     
+        
+        if($request->arquivo)
+        {
+        $extension = $request->arquivo->getClientOriginalExtension();
+        $lancamento->arquivo = $request->arquivo->storeAs ('arquivos', date('YmdHis'). '.'.$extension);
+        }
+
+        $lancamento->save();
+        return redirect()
+                ->route('lancamento.index');
     }
 
     /**
